@@ -1,0 +1,64 @@
+services:
+  backend:
+    image: dispatching-backend:prod
+    build:
+      context: ./dispatching-backend
+      dockerfile: Dockerfile
+      args:
+        PHP_ENV: production
+    restart: unless-stopped
+    volumes:
+      - ./dispatching-backend:/var/www/html
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/challenge:/home/challenge
+      - ./nginx/ssl:/etc/ssl/private
+      - ./nginx/conf.d/production.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+      - ./.output/public:/usr/share/nginx/html/output
+      - ./dispatching-backend:/var/www/html
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  db:
+    platform: linux/x86_64
+    image: mysql:latest
+    restart: unless-stopped
+    volumes:
+      - ./storage/db-data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - app-network
+
+  phpmyadmin:
+    platform: linux/amd64
+    image: phpmyadmin:5
+    container_name: pma
+    depends_on:
+      - db
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - 8001:80
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
