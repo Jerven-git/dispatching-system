@@ -44,21 +44,6 @@ services:
     networks:
       - app-network
 
-  phpmyadmin:
-    platform: linux/amd64
-    image: phpmyadmin:5
-    container_name: pma
-    depends_on:
-      - db
-    restart: unless-stopped
-    environment:
-      PMA_HOST: db
-      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
-    ports:
-      - 8001:80
-    networks:
-      - app-network
-
 networks:
   app-network:
     driver: bridge
