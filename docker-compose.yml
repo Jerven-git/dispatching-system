@@ -1,15 +1,15 @@
 services:
   frontend:
-    image: ssu-frontend:dev
+    image: dispatching-frontend:dev
     build:
-      context: ./ssu-frontend
+      context: ./dispatching-frontend
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "3000:3000"      # Main dev server
       - "24678:24678"    # HMR
     volumes:
-      - ./ssu-frontend:/app
+      - ./dispatching-frontend:/app
       - frontend_node_modules:/app/node_modules
     environment:
       HOST: '0.0.0.0'
@@ -23,17 +23,17 @@ services:
       - app-network
 
   backend:
-    image: ssu-backend:dev
+    image: dispatching-backend:dev
     build:
-      context: ./ssu-backend
+      context: ./dispatching-backend
       dockerfile: Dockerfile
       args:
         PHP_ENV: development
     restart: unless-stopped
     volumes:
-      - ./ssu-backend:/var/www/html
+      - ./dispatching-backend:/var/www/html
     env_file:
-      - ./ssu-backend/.env
+      - ./dispatching-backend/.env
     networks:
       - app-network
 
@@ -42,8 +42,8 @@ services:
     volumes:
       - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
       - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
-      - ./ssu-backend:/var/www/html
-      - ./ssu-frontend:/app
+      - ./dispatching-backend:/var/www/html
+      - ./dispatching-frontend:/app
     ports:
       - 8000:80
     networks:
@@ -91,17 +91,17 @@ services:
       - app-network
 
   queue:
-    image: ssu-backend:dev
+    image: dispatching-backend:dev
     build:
-      context: ./ssu-backend
+      context: ./dispatching-backend
       dockerfile: Dockerfile
       args:
         PHP_ENV: development
     restart: unless-stopped
     volumes:
-      - ./ssu-backend:/var/www/html
+      - ./dispatching-backend:/var/www/html
     env_file:
-      - ./ssu-backend/.env
+      - ./dispatching-backend/.env
     command: ["php", "artisan", "queue:work", "redis", "--tries=3", "--timeout=90"]
     depends_on:
       - redis
@@ -110,17 +110,17 @@ services:
       - app-network
 
   reverb:
-    image: ssu-backend:dev
+    image: dispatching-backend:dev
     build:
-      context: ./ssu-backend
+      context: ./dispatching-backend
       dockerfile: Dockerfile
       args:
         PHP_ENV: development
     restart: unless-stopped
     volumes:
-      - ./ssu-backend:/var/www/html
+      - ./dispatching-backend:/var/www/html
     env_file:
-      - ./ssu-backend/.env
+      - ./dispatching-backend/.env
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
     depends_on:
       - redis
