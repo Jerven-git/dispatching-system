@@ -1,0 +1,8 @@
+[submodule "dispatching-backend"]
+	path = dispatching-backend
+	url = git@github.com:Jerven-git/dispatching-backend.git
+	branch = dev
+[submodule "dispatching-frontend"]
+	path = dispatching-frontend
+	url = git@github.com:Jerven-git/dispatching-frontend.git
+	branch = dev
