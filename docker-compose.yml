@@ -42,6 +42,7 @@ services:
     command: ["php", "artisan", "schedule:work"]
     depends_on:
       - db
+      - redis
     networks:
       - app-network
 
@@ -57,6 +58,29 @@ services:
     networks:
       - app-network
 
+  queue:
+    image: dispatching-backend:dev
+    restart: unless-stopped
+    volumes:
+      - ./dispatching-backend:/var/www/html
+    env_file:
+      - ./dispatching-backend/.env
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - ./storage/redis-data:/data
+    networks:
+      - app-network
+
   db:
     platform: linux/x86_64
     image: mysql:latest
@@ -68,6 +92,8 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - redis
     networks:
       - app-network
 

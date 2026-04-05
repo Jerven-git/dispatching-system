@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  backend:
+    name: Backend (Laravel)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dispatching_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, redis, gd, zip, pcntl, exif
+          coverage: none
+
+      - name: Install dependencies
+        working-directory: dispatching-backend
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare environment
+        working-directory: dispatching-backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Configure test database
+        working-directory: dispatching-backend
+        run: |
+          sed -i 's/DB_HOST=db/DB_HOST=127.0.0.1/' .env
+          sed -i 's/REDIS_HOST=redis/REDIS_HOST=127.0.0.1/' .env
+          sed -i 's/DB_DATABASE=dispatching/DB_DATABASE=dispatching_test/' .env
+          sed -i 's/DB_USERNAME=dispatching_user/DB_USERNAME=root/' .env
+          sed -i 's/DB_PASSWORD=/DB_PASSWORD=root/' .env
+
+      - name: Run migrations
+        working-directory: dispatching-backend
+        run: php artisan migrate --force
+
+      - name: Run seeders
+        working-directory: dispatching-backend
+        run: php artisan db:seed --force
+
+      - name: Run tests
+        working-directory: dispatching-backend
+        run: php artisan test
+
+      - name: Check code style
+        working-directory: dispatching-backend
+        run: vendor/bin/pint --test
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: dispatching-frontend
+        run: bun install
+
+      - name: Lint
+        working-directory: dispatching-frontend
+        run: bun run lint
+
+      - name: Type check
+        working-directory: dispatching-frontend
+        run: bun x tsc --noEmit
+
+      - name: Build
+        working-directory: dispatching-frontend
+        run: bun run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000

@@ -46,6 +46,7 @@ Thumbs.db
 # Newly added patterns can go below this line
 !example/**
 storage/db-data/*
+storage/redis-data/*
 workspace.code-workspace
 .env
 
